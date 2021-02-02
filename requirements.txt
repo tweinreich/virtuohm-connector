@@ -1,0 +1,5 @@
+mechanicalsoup
+bs4
+pandas
+argparse
+maskpass
