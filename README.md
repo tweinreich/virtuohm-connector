@@ -5,10 +5,10 @@ This is a tool to collect your information from VirtuOhm (*for students of TH Nu
 I created it so I do not have to bother using the web service too much.
 
 ## Features
-- current semester grades (*display in terminal & export to CSV and HTML*)
+- current semester grades (*terminal & export to CSV and HTML*)
 - all grades (*terminal & export to CSV and HTML*)
 - ECTS total (*terminal*)
-- studies finished status
+- studies finished status (*terminal*)
 
 ## Installation
 - (optional) set up a python virtual environment (*e.g. with pyenv*)
