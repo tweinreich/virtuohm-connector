@@ -2,8 +2,6 @@ import mechanicalsoup
 from bs4 import BeautifulSoup
 import pandas as pd
 import numpy as np
-import math
-from tabulate import tabulate
 from pathlib import Path
 from dearpygui.core import *
 from dearpygui.simple import *
@@ -65,17 +63,9 @@ def get_all_grades(url):
     dataframe = table_to_dataframe(table)
     dataframe = interpret_all_grades(dataframe)
     dataframe = remove_nan(dataframe)
-    # export_dataframe_to_files(dataframe, 'all-grades')
 
     global all_grades
     all_grades = dataframe
-
-    # TODO: Move this somewhere else
-    # without_total = dataframe.iloc[0:len(dataframe) - 1]
-    # ects_sum = without_total['ECTS'].sum()
-    # print("\n\nReal Current ECTS Count: " + str(ects_sum))
-    # print("\nYou finished {percentage_finished}% of your studies".format(
-    #     percentage_finished=math.floor(ects_sum / (210.0 / 100))))
 
     add_table("Table##all", ["", "PNr", "Exam", "Stat", "Grade", "ECTS", "SWS", "Note", "Recognition", "Semester"],
               parent="Main Window", height=600)
