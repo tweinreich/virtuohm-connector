@@ -11,6 +11,8 @@ from dearpygui.simple import *
 base_url = 'https://virtuohm.ohmportal.de'
 url = base_url + '/pls/portal/'
 links = {}
+semester_grades = pd.DataFrame()
+all_grades = pd.DataFrame()
 browser = mechanicalsoup.StatefulBrowser()
 
 
@@ -34,7 +36,10 @@ def remove_nan(dataframe):
 
 
 def dataframe_to_csv_file(dataframe, filename):
-    dataframe.to_csv(Path("./" + filename), index=True)
+    path = Path("./" + filename)
+    print('File saved to path: ')
+    print(path.absolute())
+    dataframe.to_csv(path, index=True)
 
 
 def dataframe_to_html_file(dataframe, filename):
@@ -60,16 +65,55 @@ def get_all_grades(url):
     dataframe = table_to_dataframe(table)
     dataframe = interpret_all_grades(dataframe)
     dataframe = remove_nan(dataframe)
-    print("\n\nAll Grades\n")
-    print(tabulate(dataframe, showindex=False, headers='keys'))
-    dataframe_to_csv_file(dataframe, 'all-grades.csv')
-    dataframe_to_html_file(dataframe, 'all-grades.html')
-    prettify_html('all-grades.html')
-    without_total = dataframe.iloc[0:len(dataframe) - 1]
-    ects_sum = without_total['ECTS'].sum()
-    print("\n\nReal Current ECTS Count: " + str(ects_sum))
-    print("\nYou finished {percentage_finished}% of your studies".format(
-        percentage_finished=math.floor(ects_sum / (210.0 / 100))))
+    # export_dataframe_to_files(dataframe, 'all-grades')
+
+    global all_grades
+    all_grades = dataframe
+
+    # TODO: Move this somewhere else
+    # without_total = dataframe.iloc[0:len(dataframe) - 1]
+    # ects_sum = without_total['ECTS'].sum()
+    # print("\n\nReal Current ECTS Count: " + str(ects_sum))
+    # print("\nYou finished {percentage_finished}% of your studies".format(
+    #     percentage_finished=math.floor(ects_sum / (210.0 / 100))))
+
+    add_table("Table##all", ["", "PNr", "Exam", "Stat", "Grade", "ECTS", "SWS", "Note", "Recognition", "Semester"],
+              parent="Main Window", height=600)
+    set_table_data("Table##all", dataframe_to_gui_table(dataframe))
+    add_button('Export All Grades to Files',
+               callback=file_export,
+               parent="Main Window", tip='Saves your grades to CSV and HTML')
+
+
+def dataframe_to_gui_table(dataframe):
+    """Transforms a pandas dataframe into an array that can be used by Dear PyGUI"""
+    index = dataframe.index
+    rows = len(index)
+    cols = len(dataframe.columns)
+    tabledata = []
+    for i in range(0, rows):
+        row = []
+        for j in range(0, cols):
+            row.append(dataframe.iat[i, j])
+        tabledata.append(row)
+    return tabledata
+
+
+def export_dataframe_to_files(dataframe, filename):
+    """Writes a dataframe to CSV and prettified HTML"""
+    dataframe_to_csv_file(dataframe, filename + '.csv')
+    dataframe_to_html_file(dataframe, filename + '.html')
+    prettify_html(filename + '.html')
+
+
+def file_export(sender, data):
+    print('sender:')
+    print(sender)
+    print(data)
+    if sender == 'Export Semester Grades to Files':
+        export_dataframe_to_files(semester_grades, 'semester-grades')
+    elif sender == 'Export All Grades to Files':
+        export_dataframe_to_files(all_grades, 'all-grades')
 
 
 def get_semester_grades(url):
@@ -78,17 +122,15 @@ def get_semester_grades(url):
     dataframe = table_to_dataframe(table)
     dataframe['Note'] = interpret_current_grades(dataframe)
     dataframe = dataframe.loc[:, ~dataframe.columns.str.contains('^Unnamed')]
-    print("\n\nCurrent Semester Grades\n")
-    print(tabulate(dataframe, showindex=False, headers='keys'))
-    dataframe_to_csv_file(dataframe, 'current-grades.csv')
-    dataframe_to_html_file(dataframe, 'current-grades.html')
-    prettify_html('current-grades.html')
-    add_table("Table##widget", ["Column 1", "Column 2", "Column 3"], parent="Main Window")
-    print('dataframe')
-    print(dataframe)
-    print('dataframe.values')
-    print(dataframe.values)
-    set_table_data("Table##widget", dataframe.values)
+
+    global semester_grades
+    semester_grades = dataframe
+
+    add_table("Table##semester", ["Module", "Type", "Grade"], parent="Main Window")
+    set_table_data("Table##semester", dataframe_to_gui_table(dataframe))
+    add_button('Export Semester Grades to Files',
+               callback=file_export,
+               parent="Main Window", tip='Saves your grades to CSV and HTML')
 
 
 def logout_link_present():
@@ -132,6 +174,7 @@ def download_all(sender, data):
 def show_actions():
     add_text("You are now logged in.", parent="Main Window")
     add_button('Semester Grades', callback=download_current, parent="Main Window")
+    add_same_line(parent="Main Window")
     add_button('All Grades', callback=download_all, parent="Main Window")
 
 
@@ -193,10 +236,8 @@ with window('Login Window', no_title_bar=True, autosize=True, no_resize=True):
     hide_item('Incorrect Credentials.')
     set_render_callback(position_login_window)
 
-
 with window("Main Window"):
     add_text("Use this tool to access and download your data from VirtuOhm.")
-
 
 start_dearpygui(primary_window="Main Window")
 browser.close()
