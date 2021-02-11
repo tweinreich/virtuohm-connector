@@ -31,3 +31,4 @@ This is just a collection of ideas without any commitment. Pull Requests are alw
     - connect to Ohm FBI service to get FWPF's and schedules
     - connect to Study Ohm service to get payment transactions
     - connect to website to get important data in an intuitive and convenient way
+- package app to be deployed on Linux, MacOS and Windows to make it easy to install for students without knowledge of IT
