@@ -8,14 +8,6 @@ links = {}
 browser = mechanicalsoup.StatefulBrowser()
 
 
-def delete_elements(elements_to_delete):
-    """Check for several widgets presence before deleting them if they are shown"""
-    for name in elements_to_delete:
-        shown = is_item_shown(name)
-        if shown:
-            delete_item(name)
-
-
 def recursively_show(container):
     for item in get_item_children(container):
         if get_item_children(item):
@@ -40,7 +32,6 @@ def download_all_grades(sender, data):
 def show_user_actions():
     """After successful login these actions can be performed within VirtuOhm"""
     add_dummy(parent="Main Window")
-    add_text("You are now logged in.", parent="Main Window")
     add_dummy(parent="Main Window")
     add_button('Semester Grades',
                callback=download_semester_grades,
@@ -58,6 +49,11 @@ def collect_links():
     links['logout'] = browser.links(url_regex='abmelden')[0]
 
 
+def collect_basic_info():
+    result = {'name': vo.get_user_real_name(browser)}
+    return result
+
+
 def try_login(sender, data):
     log_debug(sender)
     log_debug(data)
@@ -69,6 +65,8 @@ def try_login(sender, data):
             delete_item('Login Window')
             recursively_show('Main Window')
             collect_links()
+            info = collect_basic_info()
+            add_text("Hello " + info['name'] + ", you are now logged in.", parent="Main Window")
             show_user_actions()
         else:
             add_text('Incorrect Credentials!', color=[255, 0, 0], parent='Login Window')
