@@ -2,11 +2,11 @@ import math
 import mechanicalsoup
 from bs4 import BeautifulSoup
 import pandas as pd
-import numpy as np
 from pathlib import Path
 from dearpygui.core import *
 from dearpygui.simple import *
 import virtuohm as vo
+import dataframe_operator as do
 
 base_url = 'https://virtuohm.ohmportal.de'
 portal_url = base_url + '/pls/portal/'
@@ -14,31 +14,6 @@ links = {}
 semester_grades = pd.DataFrame()
 all_grades = pd.DataFrame()
 browser = mechanicalsoup.StatefulBrowser()
-
-
-def table_to_dataframe(table):
-    return pd.read_html(str(table))[0]
-
-
-def interpret_all_grades(dataframe):
-    dataframe['Note'] = dataframe['Note'].apply(lambda x: x / 10.0 if type(x) is float else x)
-    dataframe['Note'] = dataframe['Note'].apply(lambda x: round(x / 10.0, 2) if type(x) is float and x > 6 else x)
-    return dataframe
-
-
-def remove_nan(dataframe):
-    return dataframe.replace(to_replace=np.NaN, value='', regex=True)
-
-
-def dataframe_to_csv_file(dataframe, filename):
-    path = Path("./" + filename)
-    log_debug('File saved to path: ')
-    log_debug(path.absolute())
-    dataframe.to_csv(path, index=True)
-
-
-def dataframe_to_html_file(dataframe, filename):
-    dataframe.to_html(Path("./" + filename))
 
 
 def prettify_html(filename):
@@ -53,11 +28,6 @@ def prettify_html(filename):
     html.insert(1, head)
     with open(Path("./" + filename), 'w') as f:
         f.write(soup.prettify(formatter='html'))
-
-
-def calculate_current_credits(dataframe):
-    without_total = dataframe.iloc[0:len(dataframe) - 1]
-    return without_total['ECTS'].sum()
 
 
 def delete_elements(elements_to_delete):
@@ -75,7 +45,7 @@ def file_has_content(path):
 def get_semester_grades(url):
     content = browser.follow_link(link=url)
     table = content.soup.find('table')
-    dataframe = table_to_dataframe(table)
+    dataframe = do.table_to_dataframe(table)
     dataframe['Note'] = vo.interpret_current_grades(dataframe)
     dataframe = dataframe.loc[:, ~dataframe.columns.str.contains('^Unnamed')]
 
@@ -90,7 +60,7 @@ def get_semester_grades(url):
                   ["Module", "Type", "Grade"],
                   parent="semester",
                   show=True)
-        set_table_data("Table##semester", dataframe_to_gui_table(dataframe))
+        set_table_data("Table##semester", do.dataframe_to_gui_table(dataframe))
         add_button('Export Semester Grades to CSV',
                    callback=file_export_csv,
                    parent="semester",
@@ -105,14 +75,14 @@ def get_semester_grades(url):
 def get_all_grades(url):
     content = browser.follow_link(link=url)
     table = content.soup.find('table')
-    dataframe = table_to_dataframe(table)
-    dataframe = interpret_all_grades(dataframe)
-    dataframe = remove_nan(dataframe)
+    dataframe = do.table_to_dataframe(table)
+    dataframe = vo.interpret_all_grades(dataframe)
+    dataframe = do.remove_nan(dataframe)
 
     global all_grades
     all_grades = dataframe
 
-    credits_total = calculate_current_credits(dataframe)
+    credits_total = vo.calculate_current_credits(dataframe)
     finished_percentage = math.floor(credits_total / (210.0 / 100))
     finished_percentage_float = math.floor((finished_percentage / 100.0) * 10) / 10
 
@@ -145,30 +115,19 @@ def get_all_grades(url):
                          overlay=str(finished_percentage) + '%',
                          parent="all-grades")
         set_value("study-progress", finished_percentage_float)
-        set_table_data("Table##all", dataframe_to_gui_table(dataframe))
+        set_table_data("Table##all", do.dataframe_to_gui_table(dataframe))
 
 
 def close_export_finished_window(sender, data):
+    log_debug(sender)
+    log_debug(data)
     delete_elements(['File Saved'])
 
 
 def close_export_failed_window(sender, data):
     log_debug(sender)
+    log_debug(data)
     delete_elements(['Error saving file!'])
-
-
-def dataframe_to_gui_table(dataframe):
-    """Transforms a pandas dataframe into an array that can be used by Dear PyGUI"""
-    index = dataframe.index
-    rows = len(index)
-    cols = len(dataframe.columns)
-    tabledata = []
-    for i in range(0, rows):
-        row = []
-        for j in range(0, cols):
-            row.append(dataframe.iat[i, j])
-        tabledata.append(row)
-    return tabledata
 
 
 def export_finished(path):
@@ -192,7 +151,7 @@ def export_dataframe_to_files(dataframe, filename):
 
 
 def export_dataframe_to_csv(dataframe, filename):
-    dataframe_to_csv_file(dataframe, filename + '.csv')
+    do.dataframe_to_csv_file(dataframe, filename + '.csv')
     data_written = file_has_content(filename + '.csv')
     if data_written:
         export_finished(filename + '.csv')
@@ -201,7 +160,7 @@ def export_dataframe_to_csv(dataframe, filename):
 
 
 def export_dataframe_to_html(dataframe, filename):
-    dataframe_to_html_file(dataframe, filename + '.html')
+    do.dataframe_to_html_file(dataframe, filename + '.html')
     prettify_html(filename + '.html')
     data_written = file_has_content(filename + '.html')
     if data_written:
@@ -274,10 +233,14 @@ def recursively_show(container):
 
 
 def download_semester_grades(sender, data):
+    log_debug(sender)
+    log_debug(data)
     get_semester_grades(links['semester_grades'])
 
 
 def download_all_grades(sender, data):
+    log_debug(sender)
+    log_debug(data)
     get_all_grades(links['all_grades'])
 
 
@@ -321,6 +284,8 @@ def try_login(sender, data):
 
 
 def position_export_error_window(sender, data):
+    log_debug(sender)
+    log_debug(data)
     if does_item_exist('Error saving file!'):
         main_width = get_item_width('Main Window')
         main_height = get_item_height('Main Window')
@@ -334,6 +299,8 @@ def position_export_error_window(sender, data):
 
 
 def position_export_window(sender, data):
+    log_debug(sender)
+    log_debug(data)
     if does_item_exist('File Saved'):
         main_width = get_item_width('Main Window')
         main_height = get_item_height('Main Window')
@@ -347,6 +314,8 @@ def position_export_window(sender, data):
 
 
 def position_login_window(sender, data):
+    log_debug(sender)
+    log_debug(data)
     if does_item_exist('Login Window'):
         main_width = get_item_width('Main Window')
         main_height = get_item_height('Main Window')
