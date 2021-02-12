@@ -46,6 +46,18 @@ def get_sessions_token_url(browser):
     return token_url
 
 
+def get_user_real_name(browser):
+    page = browser.page
+    greeting = page.find(
+        lambda tag: tag.name == 'h4' and 'Willkommen' in tag.text
+    ).getText()
+    name_parts = greeting.split('-')[0].split()[2:]
+    name = ''
+    for part in name_parts:
+        name += part + ' '
+    return name
+
+
 def close_export_finished_window(sender, data):
     log_debug(sender)
     log_debug(data)
