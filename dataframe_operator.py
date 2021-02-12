@@ -1,6 +1,7 @@
 from pathlib import Path
 import pandas as pd
 import numpy as np
+from bs4 import BeautifulSoup
 
 
 def dataframe_to_gui_table(dataframe):
@@ -34,3 +35,46 @@ def dataframe_to_csv_file(dataframe, filename):
     print('File saved to path: ')
     print(path.absolute())
     dataframe.to_csv(path, index=True)
+
+
+def export_dataframe_to_csv(dataframe, filename):
+    dataframe_to_csv_file(dataframe, filename + '.csv')
+    data_written = file_has_content(filename + '.csv')
+    if data_written:
+        return True
+    else:
+        return False
+
+
+def export_dataframe_to_html(dataframe, filename):
+    dataframe_to_html_file(dataframe, filename + '.html')
+    prettify_html(filename + '.html')
+    data_written = file_has_content(filename + '.html')
+    if data_written:
+        return True
+    else:
+        return False
+
+
+def export_dataframe_to_files(dataframe, filename):
+    """Writes a dataframe to CSV and prettified HTML"""
+    export_dataframe_to_csv(dataframe, filename)
+    export_dataframe_to_html(dataframe, filename)
+
+
+def file_has_content(path):
+    return Path(path).stat().st_size > 0
+
+
+def prettify_html(filename):
+    content = Path("./" + filename).read_text()
+    soup = BeautifulSoup(content, features='lxml')
+    css = soup.new_tag('link')
+    css['rel'] = 'stylesheet'
+    css['href'] = './mvp.css'
+    head = soup.new_tag('head')
+    head.insert(1, css)
+    html = soup.find('html')
+    html.insert(1, head)
+    with open(Path("./" + filename), 'w') as f:
+        f.write(soup.prettify(formatter='html'))
