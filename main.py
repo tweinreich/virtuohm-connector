@@ -6,6 +6,7 @@ import numpy as np
 from pathlib import Path
 from dearpygui.core import *
 from dearpygui.simple import *
+import virtuohm as vo
 
 base_url = 'https://virtuohm.ohmportal.de'
 portal_url = base_url + '/pls/portal/'
@@ -17,11 +18,6 @@ browser = mechanicalsoup.StatefulBrowser()
 
 def table_to_dataframe(table):
     return pd.read_html(str(table))[0]
-
-
-def interpret_current_grades(dataframe):
-    dataframe['Note'] = dataframe['Note'].apply(lambda x: float(x) / 10.0 if '?' not in x else x)
-    return dataframe['Note']
 
 
 def interpret_all_grades(dataframe):
@@ -36,8 +32,8 @@ def remove_nan(dataframe):
 
 def dataframe_to_csv_file(dataframe, filename):
     path = Path("./" + filename)
-    print('File saved to path: ')
-    print(path.absolute())
+    log_debug('File saved to path: ')
+    log_debug(path.absolute())
     dataframe.to_csv(path, index=True)
 
 
@@ -80,7 +76,7 @@ def get_semester_grades(url):
     content = browser.follow_link(link=url)
     table = content.soup.find('table')
     dataframe = table_to_dataframe(table)
-    dataframe['Note'] = interpret_current_grades(dataframe)
+    dataframe['Note'] = vo.interpret_current_grades(dataframe)
     dataframe = dataframe.loc[:, ~dataframe.columns.str.contains('^Unnamed')]
 
     global semester_grades
@@ -157,6 +153,7 @@ def close_export_finished_window(sender, data):
 
 
 def close_export_failed_window(sender, data):
+    log_debug(sender)
     delete_elements(['Error saving file!'])
 
 
@@ -214,9 +211,8 @@ def export_dataframe_to_html(dataframe, filename):
 
 
 def file_export(sender, data):
-    print('sender:')
-    print(sender)
-    print(data)
+    log_debug(sender)
+    log_debug(data)
     if sender == 'Export Semester Grades to Files':
         export_dataframe_to_files(semester_grades, 'semester-grades')
     elif sender == 'Export All Grades to Files':
@@ -224,9 +220,8 @@ def file_export(sender, data):
 
 
 def file_export_csv(sender, data):
-    print('sender:')
-    print(sender)
-    print(data)
+    log_debug(sender)
+    log_debug(data)
     if sender == 'Export Semester Grades to CSV':
         export_dataframe_to_csv(semester_grades, 'semester-grades')
     elif sender == 'Export All Grades to CSV':
@@ -234,9 +229,8 @@ def file_export_csv(sender, data):
 
 
 def file_export_html(sender, data):
-    print('sender:')
-    print(sender)
-    print(data)
+    log_debug(sender)
+    log_debug(data)
     if sender == 'Export Semester Grades to HTML':
         export_dataframe_to_html(semester_grades, 'semester-grades')
     elif sender == 'Export All Grades to HTML':
@@ -309,9 +303,8 @@ def collect_links():
 
 
 def try_login(sender, data):
-    print('sender: ' + sender)
-    print('data: ')
-    print(data)
+    log_debug(sender)
+    log_debug(data)
     password = get_value('Password')
     user = get_value('User')
     if password and user:
@@ -386,5 +379,7 @@ with window('Login Window', no_title_bar=True, autosize=True, no_resize=True):
 with window("Main Window"):
     add_text("Use this tool to access and download your data from VirtuOhm.")
 
+# Activate logging
+# show_logger()
 start_dearpygui(primary_window="Main Window")
 browser.close()
